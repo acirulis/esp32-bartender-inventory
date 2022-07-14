@@ -6,15 +6,15 @@
 #include <PubSubClient.h>
 #include <WiFiManager.h>
 
-#define DOUT  17
-#define CLK  16
+#define DOUT  17 //load cell to HX711
+#define CLK  16 //load acell to HX711
 #define BUZZER_PIN 19
 #define BUZZER_CHANNEL 0
 
-#define RXBARCODE 23
+#define RXBARCODE 23 // TTL Serial interface SERIAL_8N1
 
 
-#define MQTT_SERVER "134.209.237.109"
+#define MQTT_SERVER "207.154.238.45"
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -114,7 +114,7 @@ void reconnect() {
     while (!client.connected()) {
         Serial.print("MQTT connect...");
         Serial.print("Attempting MQTT connection...");
-        if (client.connect("Client_ESP32", "mq_device", "mq2")) {
+        if (client.connect("Client_ESP32", "mq_device", "eU42MzLqXLXV")) {
             Serial.println("connected");
             wifi_status_notified = false;
         } else {
@@ -238,8 +238,8 @@ void loop() {
         lcd.print("Svars: ");
         lcd.printf("%.0f g", avg);
 
-        sprintf(msg, "{\"id\":\"pNvkH9sk8s5BdnMQQe\",\"b\":\"%s\",\"w\":\"%.0f\"}", eancode, avg);
-        client.publish("INVENTORY", msg);
+        sprintf(msg, R"({"b":"%s","w":"%.0f"})", eancode, avg);
+        client.publish("barspector/id001", msg);
 
         object_scanned = false;
     }
