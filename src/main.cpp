@@ -305,7 +305,7 @@ void loop() {
         }
         else
         {
-            eancode[13] = 0;
+            eancode[i] = 0;
             Serial.print("Barcode received: ");
             Serial.println(eancode);
             if(!strcmp(eancode, "CALIBRATION.."))
