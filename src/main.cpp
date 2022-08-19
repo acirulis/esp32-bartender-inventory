@@ -34,9 +34,10 @@ bool wifi_status_notified = false;
 float change;
 
 char eancode[14];
+char lastread[14];
 char msg[60];
 byte i = 0;
-
+long currmillis;
 
 void Scanner() {
     Serial.println();
@@ -75,38 +76,38 @@ void Scanner() {
     }
 }
 
-void setup_wifi() {
-   const char *ssid = "WD_guests";
-   const char *password = "Spikeri21";
-   if (WiFi.status() == WL_CONNECTED) return;
-   lcd.clear();
-   lcd.setCursor(0, 0);
-   lcd.print("Connecting WIFI");
-   lcd.setCursor(0, 1);
-   lcd.print(ssid);
-   Serial.print("Starting Wifi connection to ");
-   Serial.println(ssid);
-   WiFi.mode(WIFI_STA);
-   WiFi.begin(ssid, password);
-   int failed_counter = 0;
-   while (WiFi.status() != WL_CONNECTED) {
-       delay(1000);
-       Serial.print(".");
-       failed_counter++;
-       if (failed_counter > 5) {
-           Serial.println();
-           Serial.println("Wifi connection failed");
-           return;
-       }
-   }
-   Serial.println();
-   Serial.println("WiFi connected");
-   Serial.print("IP address: ");
-   Serial.println(WiFi.localIP());
-}
+// void setup_wifi() {
+//    const char *ssid = "WD_guests";
+//    const char *password = "Spikeri21";
+//    if (WiFi.status() == WL_CONNECTED) return;
+//    lcd.clear();
+//    lcd.setCursor(0, 0);
+//    lcd.print("Connecting WIFI");
+//    lcd.setCursor(0, 1);
+//    lcd.print(ssid);
+//    Serial.print("Starting Wifi connection to ");
+//    Serial.println(ssid);
+//    WiFi.mode(WIFI_STA);
+//    WiFi.begin(ssid, password);
+//    int failed_counter = 0;
+//    while (WiFi.status() != WL_CONNECTED) {
+//        delay(1000);
+//        Serial.print(".");
+//        failed_counter++;
+//        if (failed_counter > 5) {
+//            Serial.println();
+//            Serial.println("Wifi connection failed");
+//            return;
+//        }
+//    }
+//    Serial.println();
+//    Serial.println("WiFi connected");
+//    Serial.print("IP address: ");
+//    Serial.println(WiFi.localIP());
+// }
 
 void reconnect() {
-   setup_wifi();
+//    setup_wifi();
     if (WiFi.status() != WL_CONNECTED) return; // continue to MQTT only if WIFI ready
     const char *mqtt_server = MQTT_SERVER;
     client.setServer(mqtt_server, 1883);
@@ -213,12 +214,12 @@ void SetupBarcode()
     Serial.println(doSetup);
     if(doSetup)
     {
-        byte scanMode[] = {0x7E, 0x01, 0x30, 0x30, 0x30, 0x30, 0x40, 0x53, 0x43, 0x4e, 0x4d, 0x4f, 0x44, 0x33, 0x3B, 0x03};
+        byte scanMode3[] = {0x7E, 0x01, 0x30, 0x30, 0x30, 0x30, 0x40, 0x53, 0x43, 0x4e, 0x4d, 0x4f, 0x44, 0x33, 0x3B, 0x03};
         byte reread[] = {0x7E, 0x01, 0x30, 0x30, 0x30, 0x30, 0x40, 0x52, 0x52, 0x44, 0x45, 0x4e, 0x41, 0x31, 0x3b, 0x03};
         byte rereadLength[] = {0x7E, 0x01, 0x30, 0x30, 0x30, 0x30, 0x40, 0x52, 0x52, 0x44, 0x44, 0x55, 0x52, 0x32, 0x30, 0x30, 0x30, 0x3b, 0x03};
         byte interf[] = {0x7E, 0x01, 0x30, 0x30, 0x30, 0x30, 0x40, 0x49, 0x4e, 0x54, 0x45, 0x52, 0x46, 0x30, 0x3b, 0x03};
         //byte baudRate[] = {0x7E, 0x01, 0x30, 0x30, 0x30, 0x30, 0x40, 0x32, 0x33, 0x32, 0x42, 0x41, 0x44, 0x38, 0x3b, 0x03};
-        Serial2.write(scanMode, sizeof(scanMode));
+        Serial2.write(scanMode3, sizeof(scanMode3));
         delay(100);
         Serial2.write(reread, sizeof(reread));
         delay(100);
@@ -251,7 +252,7 @@ void setup()
     SetupBarcode();
     WiFi.mode(WIFI_STA);
     wm.setDebugOutput(false);
-  //  wm.resetSettings();
+    // wm.resetSettings();
     wm.setConfigPortalBlocking(false);
 
     xTaskCreatePinnedToCore(
@@ -295,6 +296,7 @@ void loop() {
             char x = Serial2.read();
             eancode[i++] = x;
         }
+        eancode[i] = 0;
         if(eancode[0] == 0)
         {
             Serial.println("Nullcode");
@@ -302,13 +304,31 @@ void loop() {
         else if(eancode[0] == 2)
         {
             Serial.println("Command return");
+            Serial.println(eancode);
+            if(eancode[13] == '0')
+            {
+                byte scanMode3[] = {0x7E, 0x01, 0x30, 0x30, 0x30, 0x30, 0x40, 0x53, 0x43, 0x4e, 0x4d, 0x4f, 0x44, 0x33, 0x3B, 0x03};
+                Serial2.write(scanMode3, sizeof(scanMode3));
+            }
+            object_scanned = false;
+        }
+        else if(i > 14)
+        {
+            Serial.println("Barcode too long");
+            lcd.clear();
+             lcd.setCursor(0, 0);
+             lcd.print("Too fast");
+             delay(1000);
+             object_scanned = false;
         }
         else
         {
             eancode[i] = 0;
             Serial.print("Barcode received: ");
             Serial.println(eancode);
-            if(!strcmp(eancode, "CALIBRATION.."))
+            byte scanMode0[] = {0x7E, 0x01, 0x30, 0x30, 0x30, 0x30, 0x40, 0x53, 0x43, 0x4e, 0x4d, 0x4f, 0x44, 0x30, 0x3B, 0x03};
+            Serial2.write(scanMode0, sizeof(scanMode0));
+            if(!strcmp(eancode, "CALIBRATION..."))
             {
                 Calibrate();
             }
