@@ -6,6 +6,31 @@
 #include <PubSubClient.h>
 #include <WiFiManager.h>
 
+// G..13.11.9..8.17.15.6....3v3
+ 
+// LCD:
+// 	VCC -> 5V
+// 	GND -> GND
+// 	SDA -> 8
+// 	SCL -> 9
+// HX711:
+// 	VCC -> 3V3
+// 	GND -> GND
+// 	DT  -> 17
+// 	SCK -> 15
+// LV2097:
+// 	2   -> 3V3
+// 	3   -> GND 
+// 	4   -> 11
+// 	5   -> 13
+// 	10  -> LED VCC
+// Buzzer:
+// 	GND -> GND
+// 	VCC -> 6
+// LED:
+// 	GND -> GND
+// 	VCC -> LV2097 10
+
 #define DOUT  17 //load cell to HX711
 #define CLK  15 //load acell to HX711
 #define BUZZER_PIN 6
